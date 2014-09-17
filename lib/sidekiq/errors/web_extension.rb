@@ -55,12 +55,14 @@ module Sidekiq
         app.get "/errors/:error_class" do
           @error_class = params[:error_class]
           @error_messages = Hash[
-            Sidekiq.redis {|c| c.zrange("retry", 0, Sidekiq.errors_max_count) }
-            .collect{|job| Sidekiq.load_json(job)}
-            .select{|job| job['error_class'] == @error_class }
-            .collect{|job| job['error_message'] }
-            .histogram.
-            sort_by{|k,v| v}
+            Hash[
+              *Sidekiq.redis {|c| c.zrange("retry", 0, Sidekiq.errors_max_count) }
+              .collect{|job| Sidekiq.load_json(job)}
+              .select{|job| job['error_class'] == @error_class }
+              .collect{|job| job['error_message'] }
+              .group_by{ |v| v }.flat_map{ |k, v| [k, v.size] }
+            ]
+            .sort_by{|k,v| v}
             .reverse
           ]
           render(:erb, File.read(File.join(view_path, "errors_class.erb")))
@@ -68,9 +70,11 @@ module Sidekiq
       
         app.get "/errors" do
           @errors = Hash[
-            Sidekiq.redis {|c| c.zrange("retry", 0, Sidekiq.errors_max_count) }
-            .collect{|job| Sidekiq.load_json(job)['error_class']}
-            .histogram
+            Hash[
+              *Sidekiq.redis {|c| c.zrange("retry", 0, Sidekiq.errors_max_count) }
+              .collect{|job| Sidekiq.load_json(job)['error_class']}
+              .group_by{ |v| v }.flat_map{ |k, v| [k, v.size] }
+            ]
             .sort_by{|k,v| v}
             .reverse
           ]
