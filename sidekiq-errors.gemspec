@@ -11,6 +11,6 @@ Gem::Specification.new do |spec|
   spec.license       = "MIT"
   spec.files         = `git ls-files`.split($\)
 
-  spec.add_dependency 'sidekiq', '>= 3.2.4', '~>3.2'
+  spec.add_dependency 'sidekiq', '>= 3.2', '~> 3'
 
 end
